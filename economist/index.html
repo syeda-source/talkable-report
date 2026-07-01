@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Will AI lower interest rates? — A talkable report</title>
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
+<style>
+  :root{
+    --red:#e3120b; --ink:#0d0d0d; --paper:#fdfbf7; --grey:#6b6b6b; --rule:#d8d2c7;
+    --serif:'Newsreader',Georgia,serif; --sans:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  section{padding:9vh 7vw;min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+  .eyebrow{font-size:13px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;opacity:.75}
+  .display{font-family:var(--serif);font-weight:500;line-height:1.04;letter-spacing:-.01em}
+  .reveal{opacity:0;transform:translateY(34px);transition:opacity 1s cubic-bezier(.2,.7,.2,1),transform 1s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .d1{transition-delay:.08s}.d2{transition-delay:.18s}.d3{transition-delay:.30s}
+
+  #cover{background:var(--red);color:#fff;justify-content:space-between}
+  #cover .top{display:flex;justify-content:space-between;align-items:center;font-size:13px;letter-spacing:.18em;text-transform:uppercase;opacity:.9}
+  #cover h1{font-size:clamp(48px,8.5vw,132px);margin:2vh 0;color:#fff}
+  #cover .lede{font-family:var(--serif);font-size:clamp(20px,2.4vw,32px);max-width:24ch;color:#ffd9d7}
+  .stats{display:flex;gap:clamp(28px,5vw,72px);flex-wrap:wrap;margin-top:5vh}
+  .stat .n{font-family:var(--serif);font-size:clamp(34px,5vw,64px);line-height:1}
+  .stat .l{font-size:13px;letter-spacing:.06em;text-transform:uppercase;opacity:.8;margin-top:8px}
+  .scrollcue{font-size:12px;letter-spacing:.2em;text-transform:uppercase;opacity:.8;display:flex;align-items:center;gap:10px}
+  .scrollcue .line{width:46px;height:1px;background:currentColor;display:inline-block;animation:grow 1.8s ease-in-out infinite}
+  @keyframes grow{0%,100%{transform:scaleX(.4);opacity:.4}50%{transform:scaleX(1);opacity:1}}
+
+  #statement{background:var(--paper);color:var(--ink)}
+  #statement p{font-family:var(--serif);font-size:clamp(28px,4.2vw,58px);line-height:1.14;max-width:22ch;font-weight:500}
+  #statement .sub{font-family:var(--sans);font-size:clamp(16px,1.5vw,20px);max-width:52ch;margin-top:3vh;color:#57534a;line-height:1.65;font-weight:400}
+
+  .chapter{display:grid;grid-template-columns:1fr 1fr;gap:6vw;align-items:center}
+  .chapter .copy .num{font-family:var(--serif);font-size:15px;letter-spacing:.04em;opacity:.7;margin-bottom:18px}
+  .chapter .copy h2{font-family:var(--serif);font-size:clamp(32px,4.4vw,64px);font-weight:500;line-height:1.06;margin-bottom:22px}
+  .chapter .copy p{font-size:clamp(16px,1.35vw,19px);max-width:44ch;line-height:1.65}
+  .bignum{font-family:var(--serif);font-size:clamp(60px,10vw,140px);line-height:.9;font-weight:500;margin-bottom:8px}
+  .chartwrap{position:relative;width:100%;height:min(52vh,440px)}
+  #ch-bet{background:var(--paper);color:var(--ink);border-top:3px solid var(--red)}
+  #ch-bet .bignum{color:var(--red)}
+  #ch-bet .copy p{color:#57534a}
+  #ch-boom{background:var(--ink);color:var(--paper)}
+  #ch-boom .bignum{color:#ff6f6a}
+  #ch-boom .copy p{color:#b8b3a8}
+  #ch-calm{background:var(--paper);color:var(--ink);border-top:3px solid var(--red)}
+  #ch-calm .bignum{color:var(--red)}
+  #ch-calm .copy p{color:#57534a}
+  #ch-echo{background:var(--red);color:#fff}
+  #ch-echo .copy p{color:#ffd9d7}
+
+  #ask{background:var(--ink);color:var(--paper);justify-content:center}
+  #ask .head{max-width:26ch;margin-bottom:4vh}
+  #ask .eyebrow{color:#ff6f6a;opacity:1}
+  #ask h2{font-family:var(--serif);font-size:clamp(34px,5vw,72px);font-weight:500;line-height:1.04;margin-top:14px}
+  .panel{display:grid;grid-template-columns:1.05fr 1fr;gap:4vw;align-items:start;border-top:1px solid rgba(253,251,247,.18);padding-top:5vh}
+  .answerblk .q{font-size:14px;letter-spacing:.04em;color:#9b968b;margin-bottom:10px}
+  .answerblk .a{font-family:var(--serif);font-size:clamp(20px,1.9vw,27px);line-height:1.4;color:var(--paper)}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 14px}
+  .chips button,.askrow button{font-family:var(--sans)}
+  .chips button{background:transparent;color:var(--paper);border:1px solid rgba(253,251,247,.3);border-radius:999px;padding:10px 16px;font-size:14px;cursor:pointer;transition:.2s}
+  .chips button:hover{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+  .askrow{display:flex;gap:10px;margin-top:6px}
+  .askrow input{flex:1;background:transparent;border:1px solid rgba(253,251,247,.3);border-radius:999px;padding:14px 20px;color:var(--paper);font-size:15px;outline:none}
+  .askrow input::placeholder{color:#8c877c}
+  .askrow input:focus{border-color:var(--red)}
+  .askrow button{background:var(--red);color:#fff;border:none;border-radius:999px;padding:0 24px;font-size:15px;font-weight:500;cursor:pointer}
+  .askchart{position:relative;width:100%;height:min(44vh,360px)}
+  .source{display:inline-flex;align-items:center;gap:8px;font-size:12px;margin-top:5vh;letter-spacing:.04em}
+  .dot{width:8px;height:8px;border-radius:50%;background:#6b6256;display:inline-block}
+  .dot.live{background:#37c08a}
+  #src-text{color:#8c877c}
+
+  footer{background:var(--paper);color:var(--ink);padding:7vh 7vw;min-height:auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;border-top:3px solid var(--red)}
+  footer .big{font-family:var(--serif);font-size:clamp(28px,4vw,52px);font-weight:500;line-height:1.05}
+  footer .meta{font-size:13px;letter-spacing:.02em;color:#57534a;max-width:44ch;line-height:1.6}
+
+  @media (max-width:820px){
+    .chapter{grid-template-columns:1fr;gap:5vh}
+    .panel{grid-template-columns:1fr;gap:5vh}
+    section{min-height:auto;padding:11vh 8vw}
+    #cover{min-height:100vh}
+  }
+</style>
+</head>
+<body>
+
+<section id="cover">
+  <div class="top">
+    <span>By Default — a concept for data-led publishing</span>
+    <span>Free exchange, reimagined</span>
+  </div>
+  <div>
+    <p class="eyebrow reveal in">A talkable report</p>
+    <h1 class="display reveal in d1">Will AI lower<br>interest rates?</h1>
+    <p class="lede reveal in d2">In the 1990s, Alan Greenspan bet the Fed on a productivity boom he could not yet see in the data. The question is whether AI is that boom again. This time, you can ask the data yourself.</p>
+    <div class="stats reveal in d3">
+      <div class="stat"><div class="n" id="stat-years">—</div><div class="l">years of Fed data</div></div>
+      <div class="stat"><div class="n" id="stat-series">4</div><div class="l">data series</div></div>
+      <div class="stat"><div class="n" id="stat-rate">—</div><div class="l">Fed funds rate today</div></div>
+    </div>
+  </div>
+  <div class="scrollcue">Scroll to begin <span class="line"></span></div>
+</section>
+
+<section id="statement">
+  <p class="reveal">An article tells you the author's answer. This one lets you check theirs.</p>
+  <p class="sub reveal d1">Every chart below is queried live from Federal Reserve data, right in your browser. Scroll the argument, then put your own questions to seventy years of monetary history.</p>
+</section>
+
+<section id="ch-bet" class="chapter" data-chart="bet">
+  <div class="copy">
+    <div class="num reveal">Chapter 01 — The maestro's bet</div>
+    <div class="bignum reveal d1" id="big-bet">—</div>
+    <h2 class="reveal d1">Greenspan heard a different tune.</h2>
+    <p class="reveal d2">Through 1996 and 1997, unemployment kept falling and his colleagues called for higher rates. Greenspan held. He inferred from anecdote, not statistics, that an IT productivity boom was arriving before it showed in the models.</p>
+  </div>
+  <div class="reveal d2"><div class="chartwrap"><canvas id="c-bet" role="img" aria-label="Fed funds rate and unemployment through the 1990s"></canvas></div></div>
+</section>
+
+<section id="ch-boom" class="chapter" data-chart="boom">
+  <div class="copy">
+    <div class="num reveal">Chapter 02 — The payoff</div>
+    <div class="bignum reveal d1" id="big-boom">—</div>
+    <h2 class="reveal d1">The boom was real.</h2>
+    <p class="reveal d2">Productivity growth nearly doubled in the late 1990s compared with the first half of the decade. The economy grew faster than the models said it safely could, exactly as Greenspan had wagered.</p>
+  </div>
+  <div class="reveal d2"><div class="chartwrap"><canvas id="c-boom" role="img" aria-label="Productivity growth by year through the 1990s"></canvas></div></div>
+</section>
+
+<section id="ch-calm" class="chapter" data-chart="calm">
+  <div class="copy">
+    <div class="num reveal">Chapter 03 — The dog that didn't bark</div>
+    <div class="bignum reveal d1" id="big-calm">—</div>
+    <h2 class="reveal d1">Inflation never came.</h2>
+    <p class="reveal d2">Unemployment sank to levels that were supposed to guarantee rising prices. Instead inflation stayed tame for the rest of the decade. Productivity, it turned out, had changed what the economy could bear.</p>
+  </div>
+  <div class="reveal d2"><div class="chartwrap"><canvas id="c-calm" role="img" aria-label="Inflation through the 1990s staying low"></canvas></div></div>
+</section>
+
+<section id="ch-echo" class="chapter" data-chart="echo">
+  <div class="copy">
+    <div class="num reveal">Chapter 04 — Today's echo</div>
+    <div class="bignum reveal d1" id="big-echo">—</div>
+    <h2 class="reveal d1">The tune is playing again. Maybe.</h2>
+    <p class="reveal d2" id="echo-copy">Productivity growth since 2023 is running near late-1990s levels, and AI is the anecdote in every boardroom. But this time inflation has not settled. Whether the Fed can afford to trust the boom is the open question, and it's yours to explore.</p>
+  </div>
+  <div class="reveal d2"><div class="chartwrap"><canvas id="c-echo" role="img" aria-label="Recent productivity growth compared with the 1990s"></canvas></div></div>
+</section>
+
+<section id="ask">
+  <div class="head">
+    <p class="eyebrow reveal">Now your turn</p>
+    <h2 class="display reveal d1">Ask seventy years of Fed data.</h2>
+  </div>
+  <div class="panel">
+    <div class="answerblk">
+      <div id="ans" class="reveal d1"></div>
+      <div class="chips">
+        <button data-q="What did Greenspan do with interest rates?">What did Greenspan do?</button>
+        <button data-q="Is productivity booming like the 1990s?">Is this the 90s again?</button>
+        <button data-q="What is inflation doing now?">What about inflation?</button>
+        <button data-q="How low is unemployment?">And unemployment?</button>
+      </div>
+      <div class="askrow">
+        <input id="ask-input" type="text" placeholder="Ask about rates, inflation, jobs, productivity…" aria-label="Ask the data" />
+        <button id="ask-send">Ask</button>
+      </div>
+      <div class="source"><span class="dot" id="src-dot"></span><span id="src-text">Loading dataset…</span></div>
+    </div>
+    <div><div class="askchart"><canvas id="c-ask" role="img" aria-label="Chart that updates to match the current answer"></canvas></div></div>
+  </div>
+</section>
+
+<footer>
+  <div class="big">A talkable report.<br>By Default.</div>
+  <div class="meta">A concept demonstration of conversational data storytelling for editorial. Data: Federal Reserve Economic Data (FRED), St. Louis Fed — FEDFUNDS, UNRATE, CPIAUCSL, OPHNFB. Prompted by The Economist's Free Exchange column of June 25th 2026. Not affiliated with or endorsed by The Economist.</div>
+</footer>
+
+<script>
+(function(){
+  var RED='#e3120b', INK='#0d0d0d', PAPER='#fdfbf7', GREY='#8c877c', LIGHTRED='#ff6f6a', SAND='#b8b3a8';
+  var liveOK=false, db=null;
+
+  var SQL = {
+    bet:"SELECT substr(f.month,1,4) AS k, ROUND(AVG(f.rate),2) AS v, ROUND(AVG(u.rate),2) AS v2 FROM fed_funds f JOIN unemployment u ON u.month=f.month WHERE f.month>='1990-01-01' AND f.month<'2001-01-01' GROUP BY k",
+    boom:"SELECT substr(quarter,1,4) AS k, ROUND(AVG(yoy_pct),2) AS v FROM productivity_growth WHERE quarter>='1990-01-01' AND quarter<'2001-01-01' GROUP BY k",
+    calm:"SELECT substr(i.month,1,4) AS k, ROUND(AVG(i.yoy_pct),2) AS v, ROUND(AVG(u.rate),2) AS v2 FROM inflation i JOIN unemployment u ON u.month=i.month WHERE i.month>='1990-01-01' AND i.month<'2001-01-01' GROUP BY k",
+    echo:"SELECT '1991-95' AS k, ROUND(AVG(yoy_pct),2) AS v FROM productivity_growth WHERE quarter>='1991-01-01' AND quarter<'1996-01-01' UNION ALL SELECT '1996-00', ROUND(AVG(yoy_pct),2) FROM productivity_growth WHERE quarter>='1996-01-01' AND quarter<'2001-01-01' UNION ALL SELECT '2023-today', ROUND(AVG(yoy_pct),2) FROM productivity_growth WHERE quarter>='2023-01-01'",
+    rates_now:"SELECT month AS k, rate AS v FROM fed_funds ORDER BY month DESC LIMIT 1",
+    rates_series:"SELECT substr(month,1,4) AS k, ROUND(AVG(rate),2) AS v FROM fed_funds WHERE month>='1990-01-01' GROUP BY k",
+    hold9697:"SELECT ROUND(AVG(rate),2) AS v FROM fed_funds WHERE month>='1996-01-01' AND month<'1998-01-01'",
+    un_series:"SELECT substr(month,1,4) AS k, ROUND(AVG(rate),2) AS v FROM unemployment WHERE month>='1990-01-01' GROUP BY k",
+    un_now:"SELECT month AS k, rate AS v FROM unemployment ORDER BY month DESC LIMIT 1",
+    un_low99:"SELECT MIN(rate) AS v FROM unemployment WHERE month>='1999-01-01' AND month<'2001-01-01'",
+    infl_series:"SELECT substr(month,1,4) AS k, ROUND(AVG(yoy_pct),2) AS v FROM inflation WHERE month>='1990-01-01' GROUP BY k",
+    infl_now:"SELECT month AS k, yoy_pct AS v FROM inflation ORDER BY month DESC LIMIT 1",
+    infl_late90s:"SELECT ROUND(AVG(yoy_pct),2) AS v FROM inflation WHERE month>='1996-01-01' AND month<'2001-01-01'",
+    prod_now:"SELECT quarter AS k, yoy_pct AS v FROM productivity_growth ORDER BY quarter DESC LIMIT 1",
+    years:"SELECT CAST(substr(MAX(month),1,4) AS INT)-CAST(substr(MIN(month),1,4) AS INT) AS v FROM fed_funds"
+  };
+
+  function rawQuery(sql){
+    var res=db.exec(sql);
+    if(!res.length)return [];
+    var cols=res[0].columns, vals=res[0].values;
+    return vals.map(function(row){var o={};cols.forEach(function(c,i){o[c]=row[i];});return o;});
+  }
+  var dbReady = (window.initSqlJs
+    ? initSqlJs({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/'+f;}})
+        .then(function(SQL_){ return fetch('fed_data.db').then(function(r){return r.arrayBuffer();})
+          .then(function(buf){ db=new SQL_.Database(new Uint8Array(buf)); liveOK=true; setSource(); }); })
+        .catch(function(e){ console.warn('sql.js failed', e); setSource(); })
+    : Promise.resolve().then(setSource));
+
+  var cache={};
+  function getData(key){
+    if(cache[key]) return Promise.resolve(cache[key]);
+    return dbReady.then(function(){
+      if(!liveOK||!db) return [];
+      var rows=rawQuery(SQL[key]); cache[key]=rows; return rows;
+    });
+  }
+  function setSource(){
+    var dot=document.getElementById('src-dot'), txt=document.getElementById('src-text');
+    if(liveOK){ dot.className='dot live'; txt.textContent='Live SQL on Federal Reserve data, running in your browser'; }
+    else { dot.className='dot'; txt.textContent='Dataset unavailable'; }
+  }
+
+  var pct=function(v){return (Math.round(v*10)/10)+'%';};
+  function mk(id,cfg){var el=document.getElementById(id);if(!el)return null;return new Chart(el,cfg);}
+  function niceMonth(m){ var d=new Date(m); return d.toLocaleDateString('en-GB',{month:'long',year:'numeric'}); }
+
+  function lineOpts(tick,grid){
+    return {responsive:true,maintainAspectRatio:false,animation:{duration:900},interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'top',align:'start',labels:{color:tick,font:{family:'Inter',size:12},boxWidth:12,boxHeight:2,usePointStyle:false}}},
+      scales:{x:{grid:{color:'transparent'},ticks:{color:tick,font:{family:'Inter',size:12},maxRotation:0,autoSkip:true}},
+              y:{grid:{color:grid},ticks:{color:tick,font:{family:'Inter',size:12},callback:function(v){return v+'%';}}}}};
+  }
+  function barOpts(tick,grid){
+    return {responsive:true,maintainAspectRatio:false,animation:{duration:900},
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'transparent'},ticks:{color:tick,font:{family:'Inter',size:12},maxRotation:0}},
+              y:{grid:{color:grid},ticks:{color:tick,font:{family:'Inter',size:12},callback:function(v){return v+'%';}}}}};
+  }
+
+  var charts={};
+  function line2(id,rows,l1,l2,c1,c2,tick,grid){
+    if(charts[id])charts[id].destroy();
+    charts[id]=mk(id,{type:'line',data:{labels:rows.map(function(r){return r.k;}),datasets:[
+      {label:l1,data:rows.map(function(r){return r.v;}),borderColor:c1,backgroundColor:c1,borderWidth:3,pointRadius:0,tension:.3},
+      {label:l2,data:rows.map(function(r){return r.v2;}),borderColor:c2,backgroundColor:c2,borderWidth:3,borderDash:[6,4],pointRadius:0,tension:.3}
+    ]},options:lineOpts(tick,grid)});
+  }
+  function bars(id,rows,colorFn,tick,grid){
+    if(charts[id])charts[id].destroy();
+    charts[id]=mk(id,{type:'bar',data:{labels:rows.map(function(r){return r.k;}),datasets:[
+      {data:rows.map(function(r){return r.v;}),backgroundColor:rows.map(function(r,i){return colorFn(r,i);}),borderRadius:4}
+    ]},options:barOpts(tick,grid)});
+  }
+
+  var built={};
+  function buildChapter(key){
+    if(built[key])return; built[key]=true;
+    if(key==='bet') getData('bet').then(function(rows){ line2('c-bet',rows,'Fed funds rate','Unemployment',RED,'#57534a','#57534a','rgba(13,13,13,.08)'); });
+    if(key==='boom') getData('boom').then(function(rows){ bars('c-boom',rows,function(r){return Number(r.k)>=1996?LIGHTRED:'rgba(253,251,247,.35)';},SAND,'rgba(253,251,247,.1)'); });
+    if(key==='calm') getData('calm').then(function(rows){ line2('c-calm',rows,'Inflation','Unemployment',RED,'#57534a','#57534a','rgba(13,13,13,.08)'); });
+    if(key==='echo') getData('echo').then(function(rows){ bars('c-echo',rows,function(r){return r.k==='2023-today'?'#fff':'rgba(255,255,255,.45)';},'#ffd9d7','rgba(255,255,255,.15)'); });
+  }
+
+  function setHeadline(){
+    getData('years').then(function(r){ if(r.length)document.getElementById('stat-years').textContent=r[0].v; });
+    getData('rates_now').then(function(r){ if(r.length)document.getElementById('stat-rate').textContent=pct(r[0].v); });
+    getData('hold9697').then(function(r){ if(r.length)document.getElementById('big-bet').textContent=pct(r[0].v); });
+    getData('echo').then(function(rows){
+      if(!rows.length)return;
+      var by={}; rows.forEach(function(r){by[r.k]=r.v;});
+      document.getElementById('big-boom').textContent=pct(by['1996-00']);
+      document.getElementById('big-echo').textContent=pct(by['2023-today']);
+    });
+    getData('infl_late90s').then(function(r){ if(r.length)document.getElementById('big-calm').textContent=pct(r[0].v); });
+  }
+
+  function route(q){var s=(q||'').toLowerCase();
+    if(/greenspan|hold|held|hike|cut|interest|rate(s)?\b|fed fund|monetary/.test(s))return 'rates';
+    if(/productiv|boom|90s|nineties|again|echo|output|efficien/.test(s))return 'prod';
+    if(/inflat|price|cpi|cost/.test(s))return 'inflation';
+    if(/unemploy|job|labou?r|work(er|force)/.test(s))return 'jobs';
+    if(/\bai\b|artificial/.test(s))return 'prod';
+    return null;
+  }
+
+  function renderAsk(q){
+    var key=route(q);
+    var ansEl=document.getElementById('ans');
+    function head(){ return '<div class="q">'+(q?q.replace(/</g,'&lt;'):'Where should we start?')+'</div>'; }
+    if(!key){
+      ansEl.innerHTML=head()+'<div class="a">I can answer from seventy years of Federal Reserve data: interest rates, inflation, unemployment and productivity. Try one of the questions below, or ask your own.</div>';
+      getData('rates_series').then(function(rows){ bars('c-ask',rows.filter(function(r,i){return i%3===0;}),function(){return SAND;},SAND,'rgba(253,251,247,.1)'); });
+      return;
+    }
+    if(key==='rates'){
+      Promise.all([getData('rates_series'),getData('hold9697'),getData('rates_now')]).then(function(res){
+        var hold=res[1][0].v, now=res[2][0];
+        ansEl.innerHTML=head()+'<div class="a">Greenspan held the rate near '+pct(hold)+' through 1996 and 1997 while colleagues urged hikes, betting the productivity boom made higher rates unnecessary. Today the Fed funds rate is '+pct(now.v)+' as of '+niceMonth(now.k)+'. The question is whether AI justifies the same patience.</div>';
+        line2('c-ask',res[0].map(function(r){return {k:r.k,v:r.v,v2:null};}),'Fed funds rate','',LIGHTRED,'transparent',SAND,'rgba(253,251,247,.1)');
+      });
+    }
+    if(key==='prod'){
+      Promise.all([getData('echo'),getData('prod_now')]).then(function(res){
+        var by={}; res[0].forEach(function(r){by[r.k]=r.v;});
+        var now=res[1][0];
+        ansEl.innerHTML=head()+'<div class="a">It looks eerily similar. Productivity growth averaged '+pct(by['1991-95'])+' in the early 1990s, then jumped to '+pct(by['1996-00'])+' in the boom. Since 2023 it has averaged '+pct(by['2023-today'])+', and the latest reading is '+pct(now.v)+'. By this measure, the AI era is tracking the IT era.</div>';
+        bars('c-ask',res[0],function(r){return r.k==='2023-today'?LIGHTRED:'rgba(253,251,247,.4)';},SAND,'rgba(253,251,247,.1)');
+      });
+    }
+    if(key==='inflation'){
+      Promise.all([getData('infl_series'),getData('infl_late90s'),getData('infl_now')]).then(function(res){
+        var late=res[1][0].v, now=res[2][0];
+        ansEl.innerHTML=head()+'<div class="a">Here the echo breaks down. Late-1990s inflation averaged just '+pct(late)+' even with unemployment at generational lows. Today it is running at '+pct(now.v)+' as of '+niceMonth(now.k)+'. That is the strongest argument against simply repeating the Greenspan playbook.</div>';
+        line2('c-ask',res[0].map(function(r){return {k:r.k,v:r.v,v2:null};}),'Inflation, yearly','',LIGHTRED,'transparent',SAND,'rgba(253,251,247,.1)');
+      });
+    }
+    if(key==='jobs'){
+      Promise.all([getData('un_series'),getData('un_low99'),getData('un_now')]).then(function(res){
+        var low=res[1][0].v, now=res[2][0];
+        ansEl.innerHTML=head()+'<div class="a">In the late 1990s unemployment fell to '+pct(low)+', a level the models said must ignite inflation. It did not. Today it stands at '+pct(now.v)+' as of '+niceMonth(now.k)+'. Tight labour markets are once again failing to behave the way the textbooks expect.</div>';
+        line2('c-ask',res[0].map(function(r){return {k:r.k,v:r.v,v2:null};}),'Unemployment rate','',LIGHTRED,'transparent',SAND,'rgba(253,251,247,.1)');
+      });
+    }
+  }
+
+  var askInited=false;
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.querySelectorAll('.reveal').forEach(function(r){r.classList.add('in');});
+        var k=e.target.getAttribute('data-chart'); if(k)buildChapter(k);
+        if(e.target.id==='ask'&&!askInited){askInited=true;renderAsk('What did Greenspan do with interest rates?');}
+      }
+    });
+  },{threshold:.25});
+  document.querySelectorAll('section').forEach(function(s){io.observe(s);});
+
+  document.querySelector('#ask .chips').addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;document.getElementById('ask-input').value='';renderAsk(b.getAttribute('data-q'));});
+  document.getElementById('ask-send').addEventListener('click',function(){renderAsk(document.getElementById('ask-input').value.trim()||null);});
+  document.getElementById('ask-input').addEventListener('keydown',function(ev){if(ev.key==='Enter')renderAsk(this.value.trim()||null);});
+
+  setHeadline();
+})();
+</script>
+</body>
+</html>
