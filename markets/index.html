@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Where did all the companies go? — A talkable report</title>
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
+<style>
+  :root{
+    --red:#e3120b; --coral:#f6604d; --ink:#0d0d0d; --paper:#fdfbf7; --rule:#d8d2c7;
+    --serif:'Newsreader',Georgia,serif; --sans:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  section{padding:9vh 7vw;min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+  .eyebrow{font-size:13px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;opacity:.8}
+  .display{font-family:var(--serif);font-weight:500;line-height:1.04;letter-spacing:-.01em}
+  .reveal{opacity:0;transform:translateY(34px);transition:opacity 1s cubic-bezier(.2,.7,.2,1),transform 1s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .d1{transition-delay:.08s}.d2{transition-delay:.18s}.d3{transition-delay:.30s}
+
+  #cover{background:var(--coral);color:var(--ink);justify-content:space-between}
+  #cover .top{display:flex;justify-content:space-between;align-items:center;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#4a0e08}
+  .coverGrid{display:grid;grid-template-columns:1.1fr 1fr;gap:5vw;align-items:center}
+  #cover h1{font-size:clamp(44px,7vw,110px);margin:2vh 0;color:var(--ink)}
+  #cover .lede{font-family:var(--serif);font-size:clamp(19px,2.2vw,30px);max-width:26ch;color:#4a0e08}
+  .illo{width:100%;max-width:560px;justify-self:center}
+  .stats{display:flex;gap:clamp(28px,5vw,72px);flex-wrap:wrap;margin-top:5vh}
+  .stat .n{font-family:var(--serif);font-size:clamp(34px,5vw,64px);line-height:1;color:var(--ink)}
+  .stat .l{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#4a0e08;margin-top:8px}
+  .scrollcue{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#4a0e08;display:flex;align-items:center;gap:10px}
+  .scrollcue .line{width:46px;height:1px;background:currentColor;display:inline-block;animation:grow 1.8s ease-in-out infinite}
+  @keyframes grow{0%,100%{transform:scaleX(.4);opacity:.4}50%{transform:scaleX(1);opacity:1}}
+
+  #statement{background:var(--paper);color:var(--ink)}
+  #statement p{font-family:var(--serif);font-size:clamp(28px,4.2vw,58px);line-height:1.14;max-width:22ch;font-weight:500}
+  #statement .sub{font-size:clamp(16px,1.5vw,20px);max-width:52ch;margin-top:3vh;color:#57534a;line-height:1.65}
+
+  .chapter{display:grid;grid-template-columns:1fr 1fr;gap:6vw;align-items:center}
+  .chapter .copy .num{font-family:var(--serif);font-size:15px;letter-spacing:.04em;opacity:.7;margin-bottom:18px}
+  .chapter .copy h2{font-family:var(--serif);font-size:clamp(32px,4.4vw,64px);font-weight:500;line-height:1.06;margin-bottom:22px}
+  .chapter .copy p{font-size:clamp(16px,1.35vw,19px);max-width:44ch;line-height:1.65}
+  .bignum{font-family:var(--serif);font-size:clamp(60px,10vw,140px);line-height:.9;font-weight:500;margin-bottom:8px}
+  .chartwrap{position:relative;width:100%;height:min(52vh,440px)}
+  #ch-vanish{background:var(--paper);border-top:3px solid var(--red)}
+  #ch-vanish .bignum{color:var(--red)}
+  #ch-vanish .copy p{color:#57534a}
+  #ch-giant{background:var(--ink);color:var(--paper)}
+  #ch-giant .bignum{color:#ff6f6a}
+  #ch-giant .copy p{color:#b8b3a8}
+  #ch-world{background:var(--coral);color:var(--ink)}
+  #ch-world .bignum{color:var(--paper)}
+  #ch-world .copy p{color:#4a0e08}
+
+  #ask{background:var(--ink);color:var(--paper);justify-content:center}
+  #ask .head{max-width:26ch;margin-bottom:4vh}
+  #ask .eyebrow{color:#ff6f6a;opacity:1}
+  #ask h2{font-family:var(--serif);font-size:clamp(34px,5vw,72px);font-weight:500;line-height:1.04;margin-top:14px}
+  .panel{display:grid;grid-template-columns:1.05fr 1fr;gap:4vw;align-items:start;border-top:1px solid rgba(253,251,247,.18);padding-top:5vh}
+  .answerblk .q{font-size:14px;letter-spacing:.04em;color:#9b968b;margin-bottom:10px}
+  .answerblk .a{font-family:var(--serif);font-size:clamp(20px,1.9vw,27px);line-height:1.4;color:var(--paper)}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 14px}
+  .chips button,.askrow button{font-family:var(--sans)}
+  .chips button{background:transparent;color:var(--paper);border:1px solid rgba(253,251,247,.3);border-radius:999px;padding:10px 16px;font-size:14px;cursor:pointer;transition:.2s}
+  .chips button:hover{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+  .askrow{display:flex;gap:10px;margin-top:6px}
+  .askrow input{flex:1;background:transparent;border:1px solid rgba(253,251,247,.3);border-radius:999px;padding:14px 20px;color:var(--paper);font-size:15px;outline:none}
+  .askrow input::placeholder{color:#8c877c}
+  .askrow input:focus{border-color:var(--coral)}
+  .askrow button{background:var(--red);color:#fff;border:none;border-radius:999px;padding:0 24px;font-size:15px;font-weight:500;cursor:pointer}
+  .askchart{position:relative;width:100%;height:min(44vh,360px)}
+  .source{display:inline-flex;align-items:center;gap:8px;font-size:12px;margin-top:5vh;letter-spacing:.04em}
+  .dot{width:8px;height:8px;border-radius:50%;background:#6b6256;display:inline-block}
+  .dot.live{background:#37c08a}
+  #src-text{color:#8c877c}
+
+  footer{background:var(--paper);color:var(--ink);padding:7vh 7vw;min-height:auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;border-top:3px solid var(--red)}
+  footer .big{font-family:var(--serif);font-size:clamp(28px,4vw,52px);font-weight:500;line-height:1.05}
+  footer .meta{font-size:13px;color:#57534a;max-width:44ch;line-height:1.6}
+
+  @media (max-width:820px){
+    .chapter,.coverGrid{grid-template-columns:1fr;gap:5vh}
+    .panel{grid-template-columns:1fr;gap:5vh}
+    section{min-height:auto;padding:11vh 8vw}
+    #cover{min-height:100vh}
+    .illo{max-width:380px}
+  }
+</style>
+</head>
+<body>
+
+<section id="cover">
+  <div class="top">
+    <span>By Default — a talkable report</span>
+    <span>Concept demo</span>
+  </div>
+  <div class="coverGrid">
+    <div>
+      <p class="eyebrow reveal in" style="color:#4a0e08">The incredible shrinking stockmarket</p>
+      <h1 class="display reveal in d1">Where did all the companies go?</h1>
+      <p class="lede reveal in d2">America's stockmarket has never been worth more. It has also lost half its companies. Scroll the story, then ask the data yourself.</p>
+      <div class="stats reveal in d3">
+        <div class="stat"><div class="n" id="stat-peak">—</div><div class="l">listed firms at the peak</div></div>
+        <div class="stat"><div class="n" id="stat-now">—</div><div class="l">listed firms today</div></div>
+        <div class="stat"><div class="n" id="stat-cap">—</div><div class="l">market cap vs GDP</div></div>
+      </div>
+    </div>
+    <svg class="illo reveal in d2" viewBox="0 0 560 520" role="img" aria-label="Illustration in a flat editorial style: one giant balloon lifts an office building skyward while small deflated balloons lie on the ground">
+      <title>One giant balloon lifts a building; small deflated balloons lie below</title>
+      <defs>
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+          <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0" result="g"/>
+          <feComposite in="g" in2="SourceGraphic" operator="over"/>
+        </filter>
+      </defs>
+      <g filter="url(#grain)">
+        <ellipse cx="240" cy="170" rx="130" ry="140" fill="#fdfbf7"/>
+        <path d="M240 30 C 168 30 110 92 110 170 C 110 248 168 310 240 310 C 224 250 216 210 216 170 C 216 130 224 90 240 30 Z" fill="#0d0d0d" opacity="0.08"/>
+        <ellipse cx="196" cy="120" rx="26" ry="46" fill="#fff" opacity="0.7" transform="rotate(-18 196 120)"/>
+        <path d="M186 302 L 216 388 M240 310 L 240 392 M294 302 L 264 388" stroke="#0d0d0d" stroke-width="3" fill="none"/>
+        <rect x="204" y="386" width="72" height="86" fill="#0d0d0d"/>
+        <g fill="#f6604d">
+          <rect x="214" y="396" width="12" height="12"/><rect x="234" y="396" width="12" height="12"/><rect x="254" y="396" width="12" height="12"/>
+          <rect x="214" y="416" width="12" height="12"/><rect x="234" y="416" width="12" height="12"/><rect x="254" y="416" width="12" height="12"/>
+          <rect x="214" y="436" width="12" height="12"/><rect x="254" y="436" width="12" height="12"/>
+          <rect x="234" y="436" width="12" height="36" fill="#fdfbf7"/>
+        </g>
+        <rect x="30" y="496" width="500" height="4" fill="#0d0d0d"/>
+        <g>
+          <path d="M60 486 q14 -22 34 -8 q16 12 -4 16 q-22 4 -30 -8 Z" fill="#0d0d0d"/>
+          <path d="M96 492 l16 4" stroke="#0d0d0d" stroke-width="2.5" fill="none"/>
+          <path d="M380 484 q12 -18 30 -6 q14 10 -2 14 q-20 4 -28 -8 Z" fill="#0d0d0d"/>
+          <path d="M410 490 l14 6" stroke="#0d0d0d" stroke-width="2.5" fill="none"/>
+          <path d="M470 488 q10 -14 24 -5 q11 8 -2 11 q-16 3 -22 -6 Z" fill="#0d0d0d"/>
+          <path d="M494 493 l12 3" stroke="#0d0d0d" stroke-width="2.5" fill="none"/>
+        </g>
+        <circle cx="466" cy="96" r="34" fill="#fdfbf7"/>
+      </g>
+    </svg>
+  </div>
+  <div class="scrollcue">Scroll to begin <span class="line"></span></div>
+</section>
+
+<section id="statement">
+  <p class="reveal">An index at record highs can hide a market quietly hollowing out.</p>
+  <p class="sub reveal d1">Every chart below is queried live from World Bank market data, right in your browser. Scroll the argument, then put your own questions to fifty years of stockmarket history across six countries.</p>
+</section>
+
+<section id="ch-vanish" class="chapter" data-chart="vanish">
+  <div class="copy">
+    <div class="num reveal">Chapter 01 — The vanishing</div>
+    <div class="bignum reveal d1" id="big-vanish">—</div>
+    <h2 class="reveal d1">Half the market walked away.</h2>
+    <p class="reveal d2">America's count of listed companies peaked in 1996 and has fallen ever since. Mergers ate some. Private equity took others. And thousands of firms that once would have gone public simply never came.</p>
+  </div>
+  <div class="reveal d2"><div class="chartwrap"><canvas id="c-vanish" role="img" aria-label="Number of US listed companies from 1975 to 2025, peaking in 1996 then halving"></canvas></div></div>
+</section>
+
+<section id="ch-giant" class="chapter" data-chart="giant">
+  <div class="copy">
+    <div class="num reveal">Chapter 02 — The survivors</div>
+    <div class="bignum reveal d1" id="big-giant">—</div>
+    <h2 class="reveal d1">The ones that stayed got giant.</h2>
+    <p class="reveal d2">While the market lost half its names, its value kept climbing against the whole economy. Fewer, bigger companies carry more weight than the crowded market of the 1990s ever did. That is the giga in giga-IPO.</p>
+  </div>
+  <div class="reveal d2"><div class="chartwrap"><canvas id="c-giant" role="img" aria-label="US market capitalisation as a share of GDP, rising from about 42 percent to 224 percent"></canvas></div></div>
+</section>
+
+<section id="ch-world" class="chapter" data-chart="world">
+  <div class="copy">
+    <div class="num reveal">Chapter 03 — The twist</div>
+    <div class="bignum reveal d1" id="big-world">—</div>
+    <h2 class="reveal d1">It isn't happening everywhere.</h2>
+    <p class="reveal d2">This is a Western condition, not a global one. China and India now list thousands more companies than America, and even Japan edges it. The public company isn't dying. It's moving.</p>
+  </div>
+  <div class="reveal d2"><div class="chartwrap"><canvas id="c-world" role="img" aria-label="Listed companies by country, China and India ahead of the United States"></canvas></div></div>
+</section>
+
+<section id="ask">
+  <div class="head">
+    <p class="eyebrow reveal">Now your turn</p>
+    <h2 class="display reveal d1">Ask fifty years of market data.</h2>
+  </div>
+  <div class="panel">
+    <div class="answerblk">
+      <div id="ans" class="reveal d1"></div>
+      <div class="chips">
+        <button data-q="When did America's stockmarket peak?">When did America peak?</button>
+        <button data-q="Are the surviving companies bigger?">Are the survivors bigger?</button>
+        <button data-q="Is this happening everywhere in the world?">Is it happening everywhere?</button>
+        <button data-q="What about Britain's stockmarket?">What about Britain?</button>
+      </div>
+      <div class="askrow">
+        <input id="ask-input" type="text" placeholder="Ask about listings, value, countries…" aria-label="Ask the data" />
+        <button id="ask-send">Ask</button>
+      </div>
+      <div class="source"><span class="dot" id="src-dot"></span><span id="src-text">Loading dataset…</span></div>
+    </div>
+    <div><div class="askchart"><canvas id="c-ask" role="img" aria-label="Chart that updates to match the current answer"></canvas></div></div>
+  </div>
+</section>
+
+<footer>
+  <div class="big">A talkable report.<br>By Default.</div>
+  <div class="meta">A concept demonstration of conversational data storytelling for editorial. Data: World Bank, listed domestic companies (CM.MKT.LDOM.NO) and market capitalisation of listed companies as a share of GDP (CM.MKT.LCAP.GD.ZS), 1975-2025. Prompted by The Economist's Buttonwood column on giga-IPOs. Not affiliated with or endorsed by The Economist.</div>
+</footer>
+
+<script>
+(function(){
+  var RED='#e3120b', CORAL='#f6604d', INK='#0d0d0d', PAPER='#fdfbf7', SAND='#b8b3a8', LIGHTRED='#ff6f6a';
+  var liveOK=false, db=null;
+
+  var SQL = {
+    us_series:"SELECT year AS k, count AS v FROM listed_companies WHERE country='United States' ORDER BY year",
+    us_peak:"SELECT year AS k, count AS v FROM listed_companies WHERE country='United States' ORDER BY count DESC LIMIT 1",
+    us_latest:"SELECT year AS k, count AS v FROM listed_companies WHERE country='United States' ORDER BY year DESC LIMIT 1",
+    cap_series:"SELECT year AS k, pct AS v FROM market_cap_gdp WHERE country='United States' ORDER BY year",
+    cap_first:"SELECT year AS k, pct AS v FROM market_cap_gdp WHERE country='United States' ORDER BY year LIMIT 1",
+    cap_latest:"SELECT year AS k, pct AS v FROM market_cap_gdp WHERE country='United States' ORDER BY year DESC LIMIT 1",
+    world_latest:"SELECT l.country AS k, l.count AS v, l.year AS y FROM listed_companies l JOIN (SELECT country, MAX(year) my FROM listed_companies GROUP BY country) m ON m.country=l.country AND m.my=l.year ORDER BY v DESC",
+    uk_series:"SELECT year AS k, count AS v FROM listed_companies WHERE country='Britain' ORDER BY year",
+    uk_peak:"SELECT year AS k, count AS v FROM listed_companies WHERE country='Britain' ORDER BY count DESC LIMIT 1",
+    uk_latest:"SELECT year AS k, count AS v FROM listed_companies WHERE country='Britain' ORDER BY year DESC LIMIT 1",
+    de_peak:"SELECT year AS k, count AS v FROM listed_companies WHERE country='Germany' ORDER BY count DESC LIMIT 1",
+    de_latest:"SELECT year AS k, count AS v FROM listed_companies WHERE country='Germany' ORDER BY year DESC LIMIT 1"
+  };
+
+  function rawQuery(sql){
+    var res=db.exec(sql);
+    if(!res.length)return [];
+    var cols=res[0].columns, vals=res[0].values;
+    return vals.map(function(row){var o={};cols.forEach(function(c,i){o[c]=row[i];});return o;});
+  }
+  var dbReady = (window.initSqlJs
+    ? initSqlJs({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/'+f;}})
+        .then(function(SQL_){ return fetch('markets_data.db').then(function(r){return r.arrayBuffer();})
+          .then(function(buf){ db=new SQL_.Database(new Uint8Array(buf)); liveOK=true; setSource(); }); })
+        .catch(function(e){ console.warn('sql.js failed', e); setSource(); })
+    : Promise.resolve().then(setSource));
+
+  var cache={};
+  function getData(key){
+    if(cache[key]) return Promise.resolve(cache[key]);
+    return dbReady.then(function(){
+      if(!liveOK||!db) return [];
+      var rows=rawQuery(SQL[key]); cache[key]=rows; return rows;
+    });
+  }
+  function setSource(){
+    var dot=document.getElementById('src-dot'), txt=document.getElementById('src-text');
+    if(liveOK){ dot.className='dot live'; txt.textContent='Live SQL on World Bank data, running in your browser'; }
+    else { dot.className='dot'; txt.textContent='Dataset unavailable'; }
+  }
+
+  var fmtN=function(v){return Number(v).toLocaleString();};
+  var pct=function(v){return (Math.round(v*10)/10)+'%';};
+  function mk(id,cfg){var el=document.getElementById(id);if(!el)return null;return new Chart(el,cfg);}
+
+  function lineOpts(tick,grid,fmt){
+    return {responsive:true,maintainAspectRatio:false,animation:{duration:900},interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'transparent'},ticks:{color:tick,font:{family:'Inter',size:12},maxRotation:0,autoSkip:true,maxTicksLimit:9}},
+              y:{grid:{color:grid},ticks:{color:tick,font:{family:'Inter',size:12},callback:function(v){return fmt?fmt(v):fmtN(v);}}}}};
+  }
+  function barOpts(tick,grid,horizontal){
+    return {responsive:true,maintainAspectRatio:false,animation:{duration:900},indexAxis:horizontal?'y':'x',
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:horizontal?grid:'transparent'},ticks:{color:tick,font:{family:'Inter',size:12},maxRotation:0,callback:function(v){return horizontal?fmtN(v):this.getLabelForValue(v);}}},
+              y:{grid:{color:horizontal?'transparent':grid},ticks:{color:tick,font:{family:'Inter',size:12},callback:function(v){return horizontal?this.getLabelForValue(v):fmtN(v);}}}}};
+  }
+
+  var charts={};
+  function lineChart(id,rows,color,tick,grid,fmt,fill){
+    if(charts[id])charts[id].destroy();
+    charts[id]=mk(id,{type:'line',data:{labels:rows.map(function(r){return r.k;}),datasets:[
+      {data:rows.map(function(r){return r.v;}),borderColor:color,backgroundColor:fill||'transparent',fill:!!fill,borderWidth:3,pointRadius:0,tension:.3}
+    ]},options:lineOpts(tick,grid,fmt)});
+  }
+  function barChart(id,rows,colorFn,tick,grid,horizontal){
+    if(charts[id])charts[id].destroy();
+    charts[id]=mk(id,{type:'bar',data:{labels:rows.map(function(r){return r.k;}),datasets:[
+      {data:rows.map(function(r){return r.v;}),backgroundColor:rows.map(function(r,i){return colorFn(r,i);}),borderRadius:4}
+    ]},options:barOpts(tick,grid,horizontal)});
+  }
+
+  var built={};
+  function buildChapter(key){
+    if(built[key])return; built[key]=true;
+    if(key==='vanish') getData('us_series').then(function(rows){ lineChart('c-vanish',rows,RED,'#57534a','rgba(13,13,13,.08)'); });
+    if(key==='giant') getData('cap_series').then(function(rows){ lineChart('c-giant',rows,LIGHTRED,SAND,'rgba(253,251,247,.1)',function(v){return v+'%';}); });
+    if(key==='world') getData('world_latest').then(function(rows){ barChart('c-world',rows,function(r){return r.k==='United States'?PAPER:'rgba(13,13,13,.75)';},'#4a0e08','rgba(13,13,13,.15)',true); });
+  }
+
+  function setHeadline(){
+    Promise.all([getData('us_peak'),getData('us_latest'),getData('cap_latest'),getData('world_latest')]).then(function(res){
+      if(!res[0].length)return;
+      var peak=res[0][0], latest=res[1][0], cap=res[2][0], world=res[3];
+      document.getElementById('stat-peak').textContent=fmtN(peak.v);
+      document.getElementById('stat-now').textContent=fmtN(latest.v);
+      document.getElementById('stat-cap').textContent=pct(cap.v);
+      var drop=Math.round(100*(peak.v-latest.v)/peak.v);
+      document.getElementById('big-vanish').textContent='-'+drop+'%';
+      document.getElementById('big-giant').textContent=pct(cap.v);
+      var rank=world.findIndex(function(r){return r.k==='United States';})+1;
+      var ord={1:'1st',2:'2nd',3:'3rd',4:'4th',5:'5th',6:'6th'}[rank]||rank+'th';
+      document.getElementById('big-world').textContent=ord;
+    });
+  }
+
+  function route(q){var s=(q||'').toLowerCase();
+    if(/britain|uk\b|united kingdom|london|german|europe/.test(s))return 'uk';
+    if(/everywhere|global|world|china|india|japan|asia|country|countries|compare/.test(s))return 'world';
+    if(/big|value|cap|gdp|worth|giant|survivor|price|expensive/.test(s))return 'giant';
+    if(/peak|when|shrink|vanish|fewer|half|how many|america|listed|companies|ipo|count|gone|go\b/.test(s))return 'vanish';
+    return null;
+  }
+
+  function renderAsk(q){
+    var key=route(q);
+    var ansEl=document.getElementById('ans');
+    function head(){ return '<div class="q">'+(q?q.replace(/</g,'&lt;'):'Where should we start?')+'</div>'; }
+    if(!key){
+      ansEl.innerHTML=head()+'<div class="a">I can answer from fifty years of World Bank stockmarket data across six countries: company counts, market value, and how they compare. Try one of the questions below, or ask your own.</div>';
+      getData('us_series').then(function(rows){ lineChart('c-ask',rows,SAND,SAND,'rgba(253,251,247,.1)'); });
+      return;
+    }
+    if(key==='vanish'){
+      Promise.all([getData('us_series'),getData('us_peak'),getData('us_latest')]).then(function(res){
+        var peak=res[1][0], latest=res[2][0];
+        var drop=Math.round(100*(peak.v-latest.v)/peak.v);
+        ansEl.innerHTML=head()+'<div class="a">America peaked in '+peak.k+' with '+fmtN(peak.v)+' listed companies. By '+latest.k+' that had fallen to '+fmtN(latest.v)+', a drop of '+drop+'%. The shrinking is not a blip; it has run for nearly three decades.</div>';
+        lineChart('c-ask',res[0],LIGHTRED,SAND,'rgba(253,251,247,.1)');
+      });
+    }
+    if(key==='giant'){
+      Promise.all([getData('cap_series'),getData('cap_first'),getData('cap_latest')]).then(function(res){
+        var first=res[1][0], latest=res[2][0];
+        ansEl.innerHTML=head()+'<div class="a">Yes, dramatically. The US market was worth '+pct(first.v)+' of GDP in '+first.k+'. Today it is '+pct(latest.v)+' as of '+latest.k+'. Half as many companies now carry more than five times the economic weight. Fewer, bigger, heavier.</div>';
+        lineChart('c-ask',res[0],LIGHTRED,SAND,'rgba(253,251,247,.1)',function(v){return v+'%';});
+      });
+    }
+    if(key==='world'){
+      getData('world_latest').then(function(rows){
+        var by={}; rows.forEach(function(r){by[r.k]=r;});
+        ansEl.innerHTML=head()+'<div class="a">Here is the twist. China lists '+fmtN(by['China'].v)+' companies and India '+fmtN(by['India'].v)+', both far ahead of America’s '+fmtN(by['United States'].v)+'. Even Japan edges it. The shrinking market is a Western condition; the public company is thriving, it has just changed address.</div>';
+        barChart('c-ask',rows,function(r){return r.k==='United States'?LIGHTRED:'rgba(253,251,247,.4)';},SAND,'rgba(253,251,247,.1)',true);
+      });
+    }
+    if(key==='uk'){
+      Promise.all([getData('uk_series'),getData('uk_peak'),getData('uk_latest'),getData('de_peak'),getData('de_latest')]).then(function(res){
+        var peak=res[1][0], latest=res[2][0], dp=res[3][0], dl=res[4][0];
+        var drop=Math.round(100*(peak.v-latest.v)/peak.v);
+        ansEl.innerHTML=head()+'<div class="a">Britain has it worse. Listings peaked at '+fmtN(peak.v)+' in '+peak.k+' and were down to '+fmtN(latest.v)+' by '+latest.k+', a fall of '+drop+'%. Germany has slid from '+fmtN(dp.v)+' to '+fmtN(dl.v)+'. The West’s shrinking market is a shared condition.</div>';
+        lineChart('c-ask',res[0],LIGHTRED,SAND,'rgba(253,251,247,.1)');
+      });
+    }
+  }
+
+  var askInited=false;
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.querySelectorAll('.reveal').forEach(function(r){r.classList.add('in');});
+        var k=e.target.getAttribute('data-chart'); if(k)buildChapter(k);
+        if(e.target.id==='ask'&&!askInited){askInited=true;renderAsk('When did America’s stockmarket peak?');}
+      }
+    });
+  },{threshold:.25});
+  document.querySelectorAll('section').forEach(function(s){io.observe(s);});
+
+  document.querySelector('#ask .chips').addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;document.getElementById('ask-input').value='';renderAsk(b.getAttribute('data-q'));});
+  document.getElementById('ask-send').addEventListener('click',function(){renderAsk(document.getElementById('ask-input').value.trim()||null);});
+  document.getElementById('ask-input').addEventListener('keydown',function(ev){if(ev.key==='Enter')renderAsk(this.value.trim()||null);});
+
+  setHeadline();
+})();
+</script>
+</body>
+</html>
